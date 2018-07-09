@@ -20,20 +20,20 @@ namespace Quartz
         /// </summary>
         /// <param name="services"></param>
         /// <param name="configuration"></param>
-        public static void AddScheduling(this IServiceCollection services, IConfiguration configuration)
+        public static async Task AddScheduling(this IServiceCollection services, IConfiguration configuration)
         {
             ISchedulerFactory sf = new StdSchedulerFactory();
-            IScheduler scheduler = sf.GetScheduler().GetAwaiter().GetResult();
+            IScheduler scheduler = await sf.GetScheduler();
 
             var implementTypes = Assembly.GetEntryAssembly().GetTypes().Where(i => i.GetTypeInfo().ImplementedInterfaces.Contains(typeof(IJob)));
             foreach (var implementType in implementTypes)
             {
                 var jobDetail = JobBuilder.Create(implementType).WithIdentity(implementType.Name).Build();
                 var trigger = TriggerBuilder.Create().WithCronSchedule(configuration[$"Schueduling:{implementType.Name}"]).Build();
-                scheduler.ScheduleJob(jobDetail, trigger);
+                await scheduler.ScheduleJob(jobDetail, trigger);
             }
 
-            scheduler.Start();
+            await scheduler.Start();
 
             services.AddSingleton<ISchedulerFactory>(sf);
             services.AddSingleton(scheduler);
